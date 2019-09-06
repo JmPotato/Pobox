@@ -3,60 +3,85 @@ const Api = {
 
     login(userinfo) {
         return fetch(this.BASE_API + "/login", {
-            method: 'POST',
+            method: "POST",
             body: JSON.stringify({userinfo: userinfo}),
             headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                "Accept": "application/json",
+                "Content-Type": "application/json"
             }
         });
     },
 
     auth(token) {
         return fetch(this.BASE_API + "/auth", {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'Authorization': token,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                "Authorization": token,
+                "Accept": "application/json",
+                "Content-Type": "application/json"
             }
         });
     },
 
     getFolders() {
         return fetch(this.BASE_API + "/folders", {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'Accept': 'application/json',
+                "Accept": "application/json",
             }
         });
     },
 
     addFolder(name) {
         return fetch(this.BASE_API + "/folders", {
-            method: 'POST',
+            method: "POST",
             body: JSON.stringify({name: name}),
             headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                "Accept": "application/json",
+                "Content-Type": "application/json"
             }
         });
     },
 
     getFolder(name) {
         return fetch(this.BASE_API + "/folders/" + name, {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'Accept': 'application/json',
+                "Accept": "application/json",
             }
         });
     },
 
     deleteFolder(name) {
         return fetch(this.BASE_API + "/folders/" + name, {
-            method: 'DELETE',
+            method: "DELETE",
             headers: {
-                'Accept': 'application/json'
+                "Accept": "application/json"
+            }
+        });
+    },
+
+    addFile(folder, file) {
+        var data = new FormData();
+        data.append("file", file);
+        return fetch(this.BASE_API + "/folders/" + folder, {
+            method: "POST",
+            body: data,
+            headers: {
+                "Accept": "application/json",
+            }
+        })
+    },
+
+    getFile(folder, filename) {
+        return this.BASE_API + "/folders/" + folder + "/" + filename;
+    },
+
+    deleteFile(folder, filename) {
+        return fetch(this.BASE_API + "/folders/" + folder + "/" + filename, {
+            method: "DELETE",
+            headers: {
+                "Accept": "application/json"
             }
         });
     }

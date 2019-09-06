@@ -23,11 +23,19 @@ class MainPanel extends Component {
         this.state = {
             folders: [],
             showAddFolderDialog: false,
-            addFolderError: false
+            addFolderError: false,
+
+            files: [],
+            showAddFileDialog: false,
+            addFileError: false,
+
+            selectedFolder: ""
         };
 
         this.addFolder = this.addFolder.bind(this);
         this.deleteFolder = this.deleteFolder.bind(this);
+        this.addfile = this.addFile.bind(this);
+        this.deleteFile = this.deleteFile.bind(this);
     }
 
     refreshFolderList() {
@@ -36,10 +44,28 @@ class MainPanel extends Component {
                 response.json().then(data => {
                     this.setState({
                         folders: data.data
-                    })
+                    });
                 })
             }
         })
+    }
+
+    refreshFileList() {
+        if (!this.state.selectedFolder) {
+            return;
+        }
+
+        Api.getFolder(this.state.selectedFolder.name).then(response => {
+            if (response.ok) {
+                response.json().then(data => {
+                    console.log(data);
+
+                    this.setState({
+                        files: data.data.files
+                    });
+                });
+            }
+        });
     }
 
     addFolder() {
@@ -53,6 +79,21 @@ class MainPanel extends Component {
                     showAddFolderDialog: false
                 });
                 this.refreshFolderList();
+            }
+        });
+    }
+
+    addFile() {
+        Api.addFile(this.state.selectedFolder.name, this.newFile).then(response => {
+            this.setState({
+                addFileError: !response.ok
+            });
+
+            if (response.ok) {
+                this.setState({
+                    showAddFileDialog: false
+                });
+                this.refreshFileList();
             }
         });
     }
@@ -74,6 +115,10 @@ class MainPanel extends Component {
                                 icon: "success",
                             });
 
+                            if (this.state.selectedFolder.name == folderName) {
+                                this.state.selectedFolder = ""
+                            }
+
                             this.refreshFolderList();
                         }
                     });
@@ -83,8 +128,46 @@ class MainPanel extends Component {
         })
     }
 
+    deleteFile(fileName) {
+        // Confirm to delete a file first
+        swal({
+            title: "Are you sure?",
+            text: "You will not be able to recover this file!",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        }).then(willDelete => {
+            if (willDelete) {
+                Api.deleteFile(this.state.selectedFolder.name, fileName).then(response => {
+                    if (response.ok) {
+                        swal("Your file has been deleted.", {
+                            icon: "success",
+                        });
+
+                        this.refreshFileList();
+                    }
+                });
+            } else {
+                swal("Your file is safe.");
+            }
+        })
+    }
+
+    changeSelectedFolder(id) {
+        if (this.state.selectedFolder.id == id) {
+            return;
+        }
+
+        this.setState({
+            selectedFolder: this.state.folders.find(x => x.id == id)
+        }, () => {
+            this.refreshFileList();
+        });
+    }
+
     componentDidMount() {
         this.refreshFolderList();
+        this.refreshFileList();
     }
 
     render() {
@@ -102,12 +185,40 @@ class MainPanel extends Component {
         const folderList = this.state.folders.map(folder => {
             return (
                 <ListGroupItem role="menu" key={folder.id}>
-                    <a>
+                    <a onClick={() => this.changeSelectedFolder(folder.id)}>
                         <Glyphicon className="folderIcon" glyph='folder-close' />
                         <span className="folderName">{folder.name}</span>
                     </a>
                     <a onClick={() => this.deleteFolder(folder.name)}>
                         <Glyphicon className="removeFolderIcon" glyph='remove' />
+                    </a>
+                </ListGroupItem>
+            )
+        });
+
+        var addFileAlert;
+        if (this.state.addFileError) {
+            addFileAlert = (
+                <Alert bsStyle="danger">
+                    <strong>Error: </strong>Please check your file name and select a folder first.
+                </Alert>
+            );
+        } else {
+            addFileAlert = <span></span>
+        }
+
+        const fileList = this.state.files.map(file => {
+            return (
+                <ListGroupItem key={file.id}>
+                    <a>
+                        <Glyphicon className="fileIcon" glyph='file' />
+                        <span className="fileName">{file.filename}</span>
+                    </a>
+                    <a onClick={() => this.deleteFile(file.filename)}>
+                        <Glyphicon className="removeFileIcon" glyph='remove' />
+                    </a>
+                    <a href={Api.getFile(this.state.selectedFolder.name, file.filename)}>
+                        <Glyphicon className="downloadFileIcon" glyph='download-alt' />
                     </a>
                 </ListGroupItem>
             )
@@ -132,7 +243,27 @@ class MainPanel extends Component {
                         </Modal.Body>
                         <Modal.Footer>
                             <Button onClick={() => this.setState({ showAddFolderDialog: false })}>Close</Button>
-                            <Button onClick={this.addFolder} bsStyle="primary">Add</Button>
+                            <Button onClick={() => this.addFolder()} bsStyle="primary">Add</Button>
+                        </Modal.Footer>
+                    </Modal>
+                </Col>
+                <Col md={8}>
+                    <Button id="addFileButton" onClick={() => this.setState({ showAddFileDialog: true })} bsStyle="primary">New File {this.state.selectedFolder ? 'for ' + this.state.selectedFolder.name : ''}</Button>
+                    <ListGroup>
+                        {fileList}
+                    </ListGroup>
+
+                    <Modal show={this.state.showAddFileDialog} onHide={() => this.setState({ showAddFileDialog: false })}>
+                        <Modal.Header>
+                            <Modal.Title>Add File</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            {addFileAlert}
+                            <FormControl type="file" placeholder="Add file" onChange={evt => this.newFile = evt.target.files[0]} />
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button onClick={() => this.setState({ showAddFileDialog: false })}>Close</Button>
+                            <Button onClick={() => this.addFile()} bsStyle="primary">Add</Button>
                         </Modal.Footer>
                     </Modal>
                 </Col>

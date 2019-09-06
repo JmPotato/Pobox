@@ -13,3 +13,25 @@
     margin-right: 5px;
     cursor: pointer;
 }
+.fileIcon {
+    margin: 5px;
+    cursor: pointer;
+}
+
+.fileName {
+    cursor: pointer;
+}
+
+.removeFileIcon {
+    float: right;
+    top: 5px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+
+.downloadFileIcon {
+    float: right;
+    top: 5px;
+    margin-right: 10px;
+    cursor: pointer;
+}
