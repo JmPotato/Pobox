@@ -41,7 +41,7 @@ class App extends Component {
   }
 
   onLogin(data) {
-    Cookies.set("token", data.token, { expires: 7 });
+    Cookies.set("token", data.token, {expires: 7});
     this.setState({
       login: true,
     });

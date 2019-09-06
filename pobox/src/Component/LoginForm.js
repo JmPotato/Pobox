@@ -1,7 +1,7 @@
 import React, { Component } from "react";
-import md5 from "md5"
+import md5 from "md5";
 
-// Bootstrap CSS
+// Bootstrap
 import Col from "react-bootstrap/lib/Col";
 import Alert from "react-bootstrap/lib/Alert";
 import FormGroup from "react-bootstrap/lib/FormGroup";
@@ -10,7 +10,7 @@ import FormControl from "react-bootstrap/lib/FormControl";
 // Custom CSS
 import "./LoginFrom.css";
 
-import Api from "../Logic/Api"
+import Api from "../Logic/Api";
 
 class LoginFrom extends Component {
     constructor(props) {
@@ -25,20 +25,18 @@ class LoginFrom extends Component {
 
     handleSubmit(e) {
         e.preventDefault();
-        const email = this.email;
-        const password = this.password;
+        const userinfo = md5(this.email + this.password);
 
-        Api.login(md5(email + password)).then(response => {
+        Api.login(userinfo).then(response => {
             if (!response.ok) {
                 this.setState({ error: true });
                 return;
             }
-
             response.json().then(data => this.props.onLogin(data))
         })
     }
 
-    render () {
+    render() {
         var alert;
         if (this.state.error) {
             alert = (
@@ -62,7 +60,7 @@ class LoginFrom extends Component {
                         <FormControl type="password" placeholder="Password" onChange={evt => this.password = evt.target.value} />
                     </FormGroup>
                     <FormGroup>
-                        <FormControl id="submitButton" type="submit" value="Login" /> 
+                        <FormControl id="submitButton" type="submit" value="Login" />
                     </FormGroup>
                 </form>
             </Col>

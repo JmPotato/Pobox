@@ -1,14 +1,14 @@
+import peewee
+
 from functools import wraps
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 
-from Crypto import Random
-from Crypto.PublicKey import RSA
-
-from itsdangerous import (TimedJSONWebSignatureSerializer
-as URLSafeSerializer, BadSignature, SignatureExpired)
+from playhouse.shortcuts import model_to_dict, dict_to_model
+from itsdangerous import (TimedJSONWebSignatureSerializer as URLSafeSerializer, BadSignature, SignatureExpired)
 
 from utils import *
+from model import Folder
 
 app = Flask(__name__)
 app.config.from_object("config")
@@ -56,7 +56,7 @@ def authorization_required(f):
 def login():
     req = request.get_json()
     # Validate username and password
-    if req["userinfo_md5_rsa"] == md5_encode(app.config['EMAIL'] + app.config['PASSWORD']):
+    if req["userinfo"] == md5_encode(app.config['EMAIL'] + app.config['PASSWORD']):
         # Generate token
         s = URLSafeSerializer(app.config["SECRET_KEY"], expires_in=7 * 24 * 3600)
 
@@ -68,6 +68,44 @@ def login():
 @authorization_required
 def auth():
     return jsonify(message="OK")
+
+@app.route("/folders", methods=["GET", "POST"])
+# TODO: @authorization_required
+def folders():
+    if request.method == "POST":
+        req = request.get_json()
+        try:
+            f = Folder.create(name=req["name"])
+            f.save()
+            return jsonify(message="OK"), 201
+        except peewee.IntegrityError as e:
+            return jsonify(message="error"), 409
+    
+    if request.method == "GET":
+        query = Folder.select()
+        if (query.exists()):
+            return jsonify(message="OK", data=[model_to_dict(folder) for folder in query])
+        else:
+            return jsonify(message="OK", data=[])
+
+@app.route("/folders/<folder_name>", methods=["GET", "DELETE"])
+# TODO: @authorization_required
+def folder(folder_name):
+    try:
+        folder = Folder.get(Folder.name == folder_name)
+    except peewee.DoesNotExist:
+        return jsonify(message="error"), 404
+
+    if request.method == "GET":
+        return jsonify(message="OK", data=[model_to_dict(folder)])
+
+    if request.method == 'DELETE':
+        try:
+            folder.delete_instance()
+        except peewee.IntegrityError:
+            return jsonify(message='error'), 409
+            
+    return jsonify(message='OK')
 
 if __name__ == "__main__":
     app.run(debug=True)
