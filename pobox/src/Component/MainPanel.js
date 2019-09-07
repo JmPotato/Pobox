@@ -11,6 +11,8 @@ import Modal from 'react-bootstrap/lib/Modal';
 import Button from 'react-bootstrap/lib/Button';
 import FormControl from 'react-bootstrap/lib/FormControl';
 import Alert from 'react-bootstrap/lib/Alert';
+import Radio from 'react-bootstrap/lib/Radio';
+import FormGroup from 'react-bootstrap/lib/FormGroup';
 
 // Custom CSS
 import './MainPanel.css';
@@ -28,14 +30,17 @@ class MainPanel extends Component {
             files: [],
             showAddFileDialog: false,
             addFileError: false,
+            showFileShareDialog: false,
 
-            selectedFolder: ""
+            selectedFolder: "",
+            selectedFile: ""
         };
 
         this.addFolder = this.addFolder.bind(this);
         this.deleteFolder = this.deleteFolder.bind(this);
         this.addfile = this.addFile.bind(this);
         this.deleteFile = this.deleteFile.bind(this);
+        this.saveFileShareType = this.saveFileShareType.bind(this)
     }
 
     refreshFolderList() {
@@ -113,15 +118,17 @@ class MainPanel extends Component {
             dangerMode: true,
         }).then(willDelete => {
             if (willDelete) {
-                if (this.state.selectedFolder.name == folderName) {
-                    this.state.selectedFolder = ""
-                }
                 Api.deleteFolder(folderName)
                     .then(response => {
                         if (response.ok) {
                             swal("Your folder has been deleted.", {
                                 icon: "success",
                             });
+                            if (this.state.selectedFolder.name === folderName) {
+                                this.setState({
+                                    selectedFolder: ""
+                                })
+                            }
 
                             this.refreshFolderList();
                             this.refreshFileList();
@@ -159,14 +166,32 @@ class MainPanel extends Component {
     }
 
     changeSelectedFolder(id) {
-        if (this.state.selectedFolder.id == id) {
+        if (this.state.selectedFolder.id === id) {
             return;
         }
 
         this.setState({
-            selectedFolder: this.state.folders.find(x => x.id == id)
+            selectedFolder: this.state.folders.find(x => x.id === id)
         }, () => {
             this.refreshFileList();
+        });
+    }
+
+    saveFileShareType() {
+        var shareType;
+        if (this.publicShareRadioRef.checked) {
+            shareType = "public";
+        } else {
+            shareType = "none";
+        }
+        Api.updataFileShareType(this.state.selectedFolder.name, this.state.selectedFile.filename, shareType).then(response => {
+            if (response.ok) {
+                this.setState({
+                    showFileShareDialog: false
+                });
+
+                this.refreshFileList();
+            }
         });
     }
 
@@ -231,6 +256,9 @@ class MainPanel extends Component {
                     <a href={Api.getFile(this.state.selectedFolder.name, file.filename)}>
                         <Glyphicon className="downloadFileIcon" glyph='download-alt' />
                     </a>
+                    <a onClick={() => this.setState({ selectedFile: file, showFileShareDialog: true })}>
+                        <Glyphicon className="shareFileIcon" glyph='share' />
+                    </a>
                 </ListGroupItem>
             )
         });
@@ -276,6 +304,40 @@ class MainPanel extends Component {
                         <Modal.Footer>
                             <Button onClick={() => this.setState({ showAddFileDialog: false })}>Close</Button>
                             <Button onClick={() => this.addFile()} bsStyle="primary">Add</Button>
+                        </Modal.Footer>
+                    </Modal>
+                    <Modal show={this.state.showFileShareDialog} onHide={() => this.setState({ showFileShareDialog: false })}>
+                        <Modal.Header>
+                            <Modal.Title>Share</Modal.Title>
+                        </Modal.Header>
+
+                        <Modal.Body>
+                            <ListGroup>
+                                <ListGroupItem>
+                                    <p>Public Share: {this.state.selectedFile.public_share_url}</p>
+                                </ListGroupItem>
+                                <ListGroupItem>
+                                    <FormGroup>
+                                        <Radio name="shareGroup"
+                                            inline
+                                            defaultChecked={this.state.selectedFile.open_public_share}
+                                            inputRef={ref => { this.publicShareRadioRef = ref; }}>
+                                            Public
+                                        </Radio>{' '}
+                                        <Radio name="shareGroup"
+                                            inline
+                                            defaultChecked={!this.state.selectedFile.open_public_share}
+                                            inputRef={ref => { this.noShareRadioRef = ref; }}>
+                                            None
+                                        </Radio>
+                                    </FormGroup>
+                                </ListGroupItem>
+                            </ListGroup>
+                        </Modal.Body>
+
+                        <Modal.Footer>
+                            <Button onClick={() => this.setState({ showFileShareDialog: false })}>Close</Button>
+                            <Button onClick={this.saveFileShareType} bsStyle="primary">Save</Button>
                         </Modal.Footer>
                     </Modal>
                 </Col>

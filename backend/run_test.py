@@ -3,7 +3,7 @@ import unittest
 import tempfile
 import json
 
-from app import app
+from run import app
 
 class PoboxTestCase(unittest.TestCase):
     def setUp(self):

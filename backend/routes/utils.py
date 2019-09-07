@@ -18,5 +18,4 @@ def base36_encode(number):
     return "".join(reversed(base36))
 
 def generate_url():
-    return base36_encode(random.randint(1, 2147483647))
-
+    return base36_encode(random.randint(1000000000, 9999999999))

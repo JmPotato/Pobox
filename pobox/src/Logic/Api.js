@@ -84,6 +84,28 @@ const Api = {
                 "Accept": "application/json"
             }
         });
+    },
+
+    generateShareFileDownloadUrl(url) {
+        return this.BASE_API + "/share/" + url + "?download=true";
+    },
+
+    updataFileShareType(folder, filename, shareType) {
+        return fetch(this.BASE_API + "/folders/" + folder + "/" + filename + "?shareType=" + shareType, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
+    },
+
+    getFileInfoWithShareUrl(url) {
+        return fetch(this.BASE_API + "/share/" + url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
     }
 }
 
