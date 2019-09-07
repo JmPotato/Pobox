@@ -1,16 +1,15 @@
 import os
-import random
 import peewee
-import hashlib
 
 from functools import wraps
-from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS, cross_origin
+from flask import Flask, jsonify, request, send_file
 
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from itsdangerous import (
     TimedJSONWebSignatureSerializer as URLSafeSerializer, BadSignature, SignatureExpired)
 
+from utils import *
 from model import Folder, File
 
 app = Flask(__name__)
@@ -18,26 +17,6 @@ app.config.from_object("config")
 
 # Cross-origin
 CORS(app)
-
-
-def generate_filename(folder, filename):
-    return hashlib.md5((folder + "_" + filename).encode("utf-8")).hexdigest()
-
-
-def base36_encode(number):
-    assert number >= 0, "Positive integer required"
-    if number == 0:
-        return "0"
-    base36 = []
-    while number != 0:
-        number, i = divmod(number, 36)
-        base36.append("0123456789abcdefghijklmnopqrstuvwxyz"[i])
-    return "".join(reversed(base36))
-
-
-def generate_url():
-    return base36_encode(random.randint(1, 2147483647))
-
 
 def verify_auth_token(token):
     s = URLSafeSerializer(app.config["SECRET_KEY"])
@@ -48,7 +27,6 @@ def verify_auth_token(token):
     except BadSignature:
         return None
     return "key" in data and data["key"] == app.config["SECRET_KEY"]
-
 
 def test_authorization():
     cookies = request.cookies
@@ -67,7 +45,6 @@ def test_authorization():
 
     return verify_auth_token(token)
 
-
 def authorization_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -77,12 +54,11 @@ def authorization_required(f):
         return f(*args, **kwargs)
     return wrapper
 
-
 @app.route("/login", methods=["POST"])
 def login():
     req = request.get_json()
     # Validate username and password
-    if req["userinfo"] == hashlib.md5((app.config["EMAIL"] + app.config["PASSWORD"]).encode("utf-8")).hexdigest():
+    if req["userinfo"] == md5_encode(app.config["EMAIL"] + app.config["PASSWORD"]):
         # Generate token
         s = URLSafeSerializer(
             app.config["SECRET_KEY"], expires_in=7 * 24 * 3600)
@@ -150,9 +126,16 @@ def folder(folder_name):
 
     if request.method == "DELETE":
         try:
+            for f in folder.files:
+                actual_filename = generate_filename(folder_name, f.filename)
+                target_file = os.path.join(os.path.expanduser(
+                    app.config["UPLOAD_FOLDER"]), actual_filename)
+                f2 = File.get(File.filename == f.filename)
+                f2.delete_instance()
+                if os.path.exists(target_file):
+                    os.remove(target_file)
             folder.delete_instance()
         except Exception as e:
-            print(e)
             return jsonify(message="error"), 409
 
     return jsonify(message="OK")
@@ -169,7 +152,6 @@ def files(folder_name, filename):
     actual_filename = generate_filename(folder_name, filename)
     target_file = os.path.join(os.path.expanduser(
         app.config["UPLOAD_FOLDER"]), actual_filename)
-    print(target_file)
 
     if request.method == "GET":
         args = request.args

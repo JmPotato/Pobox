@@ -52,6 +52,9 @@ class MainPanel extends Component {
 
     refreshFileList() {
         if (!this.state.selectedFolder) {
+            this.setState({
+                files: []
+            });
             return;
         }
 
@@ -84,18 +87,20 @@ class MainPanel extends Component {
     }
 
     addFile() {
-        Api.addFile(this.state.selectedFolder.name, this.newFile).then(response => {
-            this.setState({
-                addFileError: !response.ok
-            });
-
-            if (response.ok) {
+        if (this.state.selectedFolder) {
+            Api.addFile(this.state.selectedFolder.name, this.newFile).then(response => {
                 this.setState({
-                    showAddFileDialog: false
+                    addFileError: !response.ok
                 });
-                this.refreshFileList();
-            }
-        });
+
+                if (response.ok) {
+                    this.setState({
+                        showAddFileDialog: false
+                    });
+                    this.refreshFileList();
+                }
+            });
+        }
     }
 
     deleteFolder(folderName) {
@@ -108,6 +113,9 @@ class MainPanel extends Component {
             dangerMode: true,
         }).then(willDelete => {
             if (willDelete) {
+                if (this.state.selectedFolder.name == folderName) {
+                    this.state.selectedFolder = ""
+                }
                 Api.deleteFolder(folderName)
                     .then(response => {
                         if (response.ok) {
@@ -115,11 +123,8 @@ class MainPanel extends Component {
                                 icon: "success",
                             });
 
-                            if (this.state.selectedFolder.name == folderName) {
-                                this.state.selectedFolder = ""
-                            }
-
                             this.refreshFolderList();
+                            this.refreshFileList();
                         }
                     });
             } else {
@@ -197,10 +202,16 @@ class MainPanel extends Component {
         });
 
         var addFileAlert;
-        if (this.state.addFileError) {
+        if (!this.state.selectedFolder) {
             addFileAlert = (
                 <Alert bsStyle="danger">
-                    <strong>Error: </strong>Please check your file name and select a folder first.
+                    <strong>Error: </strong>Please select a folder first.
+                </Alert>
+            );
+        } else if (this.state.addFileError) {
+            addFileAlert = (
+                <Alert bsStyle="danger">
+                    <strong>Error: </strong>Please check your file name.
                 </Alert>
             );
         } else {
@@ -249,6 +260,7 @@ class MainPanel extends Component {
                 </Col>
                 <Col md={8}>
                     <Button id="addFileButton" onClick={() => this.setState({ showAddFileDialog: true })} bsStyle="primary">New File {this.state.selectedFolder ? 'for ' + this.state.selectedFolder.name : ''}</Button>
+                    <p></p>
                     <ListGroup>
                         {fileList}
                     </ListGroup>
