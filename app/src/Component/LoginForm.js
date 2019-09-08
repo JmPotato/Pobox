@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import md5 from "md5";
 
 // Bootstrap
+import Button from "react-bootstrap/lib/Button";
+
 import Col from "react-bootstrap/lib/Col";
 import Alert from "react-bootstrap/lib/Alert";
 import FormGroup from "react-bootstrap/lib/FormGroup";
@@ -25,7 +27,7 @@ class LoginFrom extends Component {
 
     handleSubmit(e) {
         e.preventDefault();
-        const userinfo = md5(this.email + this.password);
+        const userinfo = {username: this.username, validation: md5(this.username + this.password)};
 
         Api.login(userinfo).then(response => {
             if (!response.ok) {
@@ -54,7 +56,7 @@ class LoginFrom extends Component {
                 {alert}
                 <form id="loginForm" onSubmit={this.handleSubmit}>
                     <FormGroup>
-                        <FormControl type="text" placeholder="Email" onChange={evt => this.email = evt.target.value} />
+                        <FormControl type="text" placeholder="Username" onChange={evt => this.username = evt.target.value} />
                     </FormGroup>
                     <FormGroup>
                         <FormControl type="password" placeholder="Password" onChange={evt => this.password = evt.target.value} />
