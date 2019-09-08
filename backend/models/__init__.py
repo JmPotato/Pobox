@@ -1,5 +1,6 @@
-from .model import *
+from .users import *
+from .storages import *
 
-def creat_all_tables():
+def init_all_tables():
     db.connect()
-    db.create_tables([Folder, File])
+    db.create_tables([Folder, File, User])

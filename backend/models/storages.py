@@ -1,10 +1,4 @@
-from peewee import *
-
-db = SqliteDatabase("mydb.db", pragmas=(('foreign_keys', 'on'),))
-
-class BaseModel(Model):
-    class Meta:
-        database = db
+from .base import *
 
 class Folder(BaseModel):
     name = CharField(max_length=64, unique=True)

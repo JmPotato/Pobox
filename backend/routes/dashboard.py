@@ -3,8 +3,7 @@ import peewee
 
 import config
 
-from functools import wraps
-from flask import Blueprint, jsonify, request, send_file, redirect
+from flask import Blueprint, jsonify, send_file, redirect
 from playhouse.shortcuts import model_to_dict, dict_to_model
 from itsdangerous import (
     TimedJSONWebSignatureSerializer as URLSafeSerializer, BadSignature, SignatureExpired)
@@ -12,71 +11,10 @@ from itsdangerous import (
 from models import Folder, File
 from .utils import *
 
+dashboard = Blueprint('dashboard', __name__)
 
-def verify_auth_token(token):
-    s = URLSafeSerializer(config.SECRET_KEY)
-    try:
-        data = s.loads(token)
-    except SignatureExpired:
-        return None
-    except BadSignature:
-        return None
-    return "key" in data and data["key"] == config.SECRET_KEY
-
-
-def test_authorization():
-    cookies = request.cookies
-    headers = request.headers
-    args = request.args
-    token = None
-    # Validate token in three places
-    if "token" in cookies:
-        token = cookies["token"]
-    elif "Authorization" in headers:
-        token = headers["Authorization"]
-    elif "token" in args:
-        token = args["token"]
-    else:
-        return False
-
-    return verify_auth_token(token)
-
-
-def authorization_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        # Return code 401 when failed to validate token
-        if not test_authorization():
-            return jsonify(message="unauthorized"), 401
-        return f(*args, **kwargs)
-    return wrapper
-
-
-main = Blueprint('main', __name__)
-
-
-@main.route("/login", methods=["POST"])
-def login():
-    req = request.get_json()
-    # Validate username and password
-    if req["userinfo"] == md5_encode(config.EMAIL + config.PASSWORD):
-        # Generate token
-        s = URLSafeSerializer(
-            config.SECRET_KEY, expires_in=7 * 24 * 3600)
-
-        return jsonify(message="OK", token=s.dumps({"key": config.SECRET_KEY}).decode("utf-8"))
-    else:
-        return jsonify(message="unauthorized"), 401
-
-
-@main.route("/auth", methods=["GET"])
+@dashboard.route("/folders", methods=["GET", "POST"])
 @authorization_required
-def auth():
-    return jsonify(message="OK")
-
-
-@main.route("/folders", methods=["GET", "POST"])
-# TODO: @authorization_required
 def folders():
     if request.method == "POST":
         req = request.get_json()
@@ -95,8 +33,8 @@ def folders():
             return jsonify(message="OK", data=[])
 
 
-@main.route("/folders/<folder_name>", methods=["GET", "POST", "DELETE"])
-# TODO: @authorization_required
+@dashboard.route("/folders/<folder_name>", methods=["GET", "POST", "DELETE"])
+@authorization_required
 def folder(folder_name):
     try:
         folder = Folder.get(Folder.name == folder_name)
@@ -143,8 +81,8 @@ def folder(folder_name):
     return jsonify(message="OK")
 
 
-@main.route("/folders/<folder_name>/<filename>", methods=["GET", "PATCH", "DELETE"])
-# TODO: @authorization_required
+@dashboard.route("/folders/<folder_name>/<filename>", methods=["GET", "PATCH", "DELETE"])
+@authorization_required
 def files(folder_name, filename):
     try:
         f = File.get(filename=filename)
@@ -187,7 +125,7 @@ def files(folder_name, filename):
             return jsonify(message="error"), 404
 
 
-@main.route('/share/<path>', methods=['GET'])
+@dashboard.route('/share/<path>', methods=['GET'])
 def share(path):
     is_public = False
 
@@ -221,7 +159,7 @@ def share(path):
     return jsonify(message='OK', data=payload)
 
 
-@main.route('/share/download/<path>/<filename>', methods=['GET'])
+@dashboard.route('/share/download/<path>/<filename>', methods=['GET'])
 def share_download(path, filename):
     try:
         f = File.get(File.public_share_url == path)
